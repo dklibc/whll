@@ -1,0 +1,3 @@
+open /dev/hda1
+stat /boot/System.map
+close

@@ -1,0 +1,11 @@
+I think bootloader must be as simple as possible, and it is wrong (but 
+convinient) to implement bootloader that knows how to load kernel from
+file system. So the right way to load kernel is when bootloader and 
+kernel are installed in separate disk partition that has no FS.
+
+I think that bootloader shouldn't print long descriptive messages when 
+error occurs or about at what stage it is. Why? Since long messages take 
+a lot of bytes and bootloader doesn't fit into 512 bytes, so it will 
+need to load the rest of its body... and this isn't gracefull. I think 
+one letter/char is suffitient: in case of error user should get docs and 
+decode what was happened.
