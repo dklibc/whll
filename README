@@ -81,12 +81,11 @@ begining (my current 2.6 kernel size is approx 2480 sectors, so
 reservation of the 5000 sectors will be enough for the long time)
 * Done!
 
+==Usage==
 
-<H2>Usage</H2>
-
-<P>If you need to load the second kernel or give a kernel a command line, you
+If you need to load the second kernel or give a kernel a command line, you
 should quickly press a F3 key multiple times until you see a
 bootloader greetings. A bootloader will ask you if you want to load the second
 kernel. Say 'y' if you need. Next you can input command line. You can use
 a Backspace key to edit it.
-</DIV>
+
