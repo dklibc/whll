@@ -1,92 +1,92 @@
-WHLL -- White Horse Linux Loader. Мой собственный простой как молоток загрузчик
-ядра Linux для ПК. Я начал его писать в середине января 2016 года, а закончил в
-середине февраля. Зачем нужен ещё один загрузчик? Потому что я не люблю LILO и
-GRUB, а GRUB2 вообще пиздец. Я всегда думал и думаю, что загрузчик должен быть
-очень простым, а они из него делают вундервафлю какую-то с сотней настроек в
-конфиге и с поддержкой десятка файловых систем. Что, конечно, не удивительно, с
-учётом того, что один или несколько человек в течение нескольких лет сидят над
-проектом и думают, чего бы ещё добавить. Я упал под стол, когда узнал, что
-конфиги для GRUB2 вообще редактируются не в ручную, а с помощью спец.
-утилиты... блядь, СУБД не хватает!
+=WHLL //Linux x86 PC Bootloader=
 
-Почему WHLL? Просто потому, что когда писал прототип, я попивал дешёвый скоч --
-"Белую Лошадь". Тогда я думал, что написать свой Linux загрузчик это прикольно.
-Да и опыт программирования на асме x86 у меня был.
+WHLL -- White Horse Linux Loader. My own Linux kernel bootloader for x86 PC.
+As simple as hummer. I started to write it in the middle of the Jan,2016 and
+finished in the middle of Feb. Why did I need yet another linux bootloader?
+Since I dislike GRUB and LILO. <STRONG>I always think
+that bootloader should be as simple as possible</STRONG>, but they make it with
+hundreds of config options and supporting of several file systems. There is a
+special util to edit GRUB2 configs, LOL. They should add MySQL dependency!
 
-Сначала я хотел реализовать в загрузчике чтение файловой системы EXT2, чтобы
-как GRUB читать ядро прямо из файловой системы. Но потом понял, что это не
-очень легко, хотя в принципе реализуемо. Тогда я начал копать в сторону LILO:
-LILO загружает ядро также прямо из ФС, но не знает об ФС ничего. Как же так?
-Очень просто: спец. утилита создаёт файл, который содержит список блоков файла
-ядра, и каждый блок файла содержит номер следующего блока, а в теле загрузчика
-есть номер первого блока. Таким образом LILO находит блоки, которые занимает
-блок ядра на диске. Дельно. И при каждом изменении файла ядра нужно
-пересоздавать этот файл, чтобы в нём отразились изменения. Но как узнать в
-каком блоке на диске (в разделе диска) какой блок файла содержится, т.е. что
-блок N файла содержится в блоке M раздела диска? Есть в Linux спец. функция --
-fbmap, которая сообщает требуемую информацию, я пробовал. Но всё равно, мне не
-понравилось. И вот почему:
+Why "White Horse"? Couse than I often drank cheap scotch "White Horse".
+That time I thouhgt that writing your own Linux bootloader was cool. And I also
+had an experience in coding bootloaders in asm. 
 
-По-моему, загрузчик должен быть как можно проще, и заставлять его понимать
-ФС -- это явный перебор. Поэтому я решил, что загрузчик и ядро у меня будут на
-отдельном разделе без ФС: сначала загрузчик, а потом сразу за ним ядро. Тогда
-всё просто и элегантно — чисто административное решение. Хех, под загрузчик в
-EXT2 выделяют первые 2 сектора (1КБ), видно 1КБ кода хватит для написания
-загрузчика, который бы мог грузить ядро из EXT2 (а если не хватит, можно
-запаковать код и распаковывать уже в памяти).
+First time I wanted to add support of reading EXT2 like GRUB, but this seemed
+hard to do, so I started to inspect LILO. LILO loads kernel from file system,
+but knows nothing about file system internals. How? Special util creates file
+where kernel block numbers are stored, each block of this file also stores a
+number of the next block, a number of the first block is stored in LILO body.
+This way LILO knows what disk blocks it needs to load. Simple and elegant. But
+after each modification of the kernel file you need to remake this LILO file
+with block numbers. But how we get to know in which block on disk which file
+block is resided? Linux has the special syscall -- <TT>fbmap</TT>, that doing
+this job. I tested it, but I don't like it.
 
-Ещё я решил, что загрузчик не должен писать длинные описательные сообщения об
-ошибках и сообщения о том, к какой стадии он приступает. Почему? Потому что они
-занимают много места, а я хотел уложиться в 512 байт, чтобы всё было
-элегантно -- без подгрузки своего хвоста с диска. Здесь я взял пример с LILO: о
-прохождении каждой стадии загрузчик уведомляет пользователя одной буквой в
-след. позицию на экран, а в случае ошибки выводит букву 'E'. Т.о. можно будет
-понять, на какой стадии произошла ошибка. А так же при успешной загрузке
-очередного блока ядра загрузчик выводит символ '-' в след. позицию на экране,
-чтобы можно было визуально проконтролировать его работу (имело смысл при первом
-запуске для того, чтобы можно было убедиться в его работоспособности).
+Cause I always think that a bootloader should be as simple as possible, so it's
+bad to make bootloader to know file system internals. So, I made this decision:
+bootloader and kernel should be on the separate disk partition with no file
+system.
 
-Сам код я написал на FASM — отличный ассемблер. Мой любимый. Код v1 поместился
-в 512 байт.
+NOTE: the first two 512-byte sectors in EXT2 partition are reserved for
+bootloader code. So, bootloader developers need to fit their code that knows
+EXT2 internals in only 1KB! Tip: they can compress bootloader code and
+decompress it in memory on the fly.
 
-Как оказалось, ядра Linux имеют несколько разных форматов (по-моему 2), которые
-различаются протоколом загрузки. Большая разница в том, что ранние ядра linux
-были маленькими и помещались в PC convenient memory (нижние 640КБ), а сейчас
-ядра стали больше 1МБ, поэтому их нужно грузить в Extended Memory (веше первого
-МБ), а эти адреса в лоб не доступны в 16-bit real-mode процессора x86 —
-требуются ухищрения. Я использовал unreal-mode.
+I decided that my bootloader won't print long descriptive messages. Since they
+occupies a lot of space, but I wanted to fit my bootloader in 512 bytes. In
+this case it doesn't need to load its rest from the disk. I implemented the way
+LILO does: after each completed stage it prints a char in the next console
+position, in case of error it prints 'E'. Doing this way we can get to know
+a stage where booting fails. After each successful loaded kernel block
+bootloader prints '-', so you can see that all goes fine (this is worth while
+you are debugging).
 
-Я остановился на протоколе загрузки ядра версии 2.2, потому что он используется
-на ядрах, начиная с 2.4, а более ранние я не использовал никогда.
+I use FASM. I really like it. Code of v1 fit in 512 bytes. 
 
-Для загрузки секторов диска я юзал LBA функции BIOS int 0x13.
+I got to know that Linux kernels has several formats (two?) And they are
+different in booting protocol. The first Linux kernels were small and fit in
+low 640KB of PC memory. The modern kernels are larger 1MB and needed to be
+loaded into extended memory (above the first MB). But this addresses you can't
+just read/write in the real mode of x86. I use "unreal" mode of x86 to access
+them.
 
-Написал, установил, заработало! Чуть-ли не с первого раза! Вот так-то --я крут.
+I chose to implement boot protocol version 2.2, since kernel 2.4 uses it.
+More recent kernels I hadn't used before.
 
-v1.1 Через год, в конце декабре 2016 (29 декабря!!), появилась необходимость
-немного доработать мой загрузчик: добавить возможность грузить второе ядро и
-возможность передавать ядру командную строку. Зачем всё это? Ну... грузить
-второе ядро полезно, когда скомпилил новое ядро, а оно не загрузилось. Тогда
-нужно загрузиться со старого. А передавать командную строку... Например, для
-того, чтобы передать init процессу параметр -- "boot in single-user system
-maintenance mode"
+For loading disk sectors my bootloader uses BIOS int 0x13 LBA functions.
 
-Сказано -- сделано. За день я дописал код, причём исправлений в предыдущем
-вообще не было -- чисто добавление новых функций. Вот так виртуозно, мне аж
-самому понравилось, как аккуратно получилось. Но размер вырос -- в 512 байт не
-уложился. Размер стал где-то 855 байт. Пришлось подгружать ещё один сектор. А
-всё из-за длинных сообщений.
+The bootloader worked fine from the first run -- I'm fucking cool!
 
-Короче стало так: если пользователь хочет воспользоваться новыми фичами
-(загрузить второе ядро или передать ядру командную строку), то он должен в
-процессе загрузки ПК многократно нажимать F3, пока не увидит приветствие
-загрузчика. Он задаст вопрос: "Хотите загрузить второе ядро?" Можете ответить
-'y', если вам это нужно, и вы заранее установили его в тот же раздел, после
-первого (на первое ядро резервируется 5000 секторов. NOTE: сейчас моё ядро 2.6
-занимает где-то 2480 секторов, так что с запасом). Т.е. в разделе первые два
-сектора -- загрузчик, следом идёт первое ядро, считаем, что под него уходит
-5000 секторов, а потом идёт следующее. Вот так всё просто и элегантно.
+==v1.1==
 
-Потом загрузчик попросит вас ввести командную строку, которую он передаст
-загружаемому ядру. Вводимую строку можно ограниченно редактировать с помощью
-клавиши Backspace.
+After year on Dec,29 (sic!) I needed to add to the bootloader support
+of loading the second kernel and giving command line to a kernel. What for?
+It's worth to be capable to load working kernel in case of new freshly compiled
+one failed to boot. And by means of command line you can say init process:
+"Hey! Boot in the single-user maintanance mode"
+
+I spent only one day to implement this. I didn't made any corrections in the
+existing bootloader code, I only added new functions. A new code exceeded
+512-byte limit -- it was approx 855 bytes long. So, it needs to load the first
+sector from disk byself.
+
+==Install==
+
+* Create separate disk partition
+* Write the bootloader from the sector #0 of that partition
+* Write a kernel starting from sector #2
+* Optional: write the second kernel to the offset 5000 sectors from the
+begining (my current 2.6 kernel size is approx 2480 sectors, so
+reservation of the 5000 sectors will be enough for the long time)
+* Done!
+
+
+<H2>Usage</H2>
+
+<P>If you need to load the second kernel or give a kernel a command line, you
+should quickly press a F3 key multiple times until you see a
+bootloader greetings. A bootloader will ask you if you want to load the second
+kernel. Say 'y' if you need. Next you can input command line. You can use
+a Backspace key to edit it.
+</DIV>
